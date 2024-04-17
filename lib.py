@@ -1,7 +1,7 @@
 from model import *
 import numpy as np
 
-def simShell(p: list, tmax: float, mdl: Model) -> tuple(np.ndarray, np.ndarray):
+def simShell(p: list, tmax: float, mdl: Model):
     '''
     Manages the time iterations of the simulation.
 
