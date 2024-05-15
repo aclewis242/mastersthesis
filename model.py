@@ -18,9 +18,10 @@ class Model:
         Initialises the model with the given parameters.
 
         ### Parameters
-        b: Birth/death rate
-        i: Infection rate
-        r: Recovery rate
+        bd: Birth/death rate
+        ir: Infection rate
+        rr: Recovery rate
+        hsr: Host switch rate
         '''
         self.__dict__.update(kwargs)
         E1 = [1, 0, 0]
@@ -36,10 +37,12 @@ class Model:
     
     def setRs(self, p1: list, p2: list):
         '''
-        Generates the different stochastic probabilities based on the model parameters and the given population.
+        Generates the different transition rates based on the model parameters and the given populations.
 
         ### Parameters
-        pop: A 3-element list containing the susceptible, infected, and recovered populations.
+        p1: A 3-element list containing the susceptible, infected, and recovered populations. This is for the 'main' population, i.e.
+        the one governed by this model's parameter set.
+        p2: As above, but for the other population.
         '''
         self.Rs = [1.0,
                    1.0,
@@ -51,15 +54,22 @@ class Model:
         self.Rs /= sum(self.Rs)
     
     def addR(self, r: float):
+        '''
+        Adds another transition rate to the model.
+
+        ### Parameters
+        r: The rate in question.
+        '''
         self.Rs.append(r/sum(self.Rs))
         self.Rs = normalise(self.Rs)
 
     def trans(self, p: tuple[list], idx: int):
         '''
-        Chooses an outcome for a single timestep.
+        Effects the changes in the population dictated by the simulation.
 
         ### Parameters
-        pop: A 3-element list containing the susceptible, infected, and recovered populations.
+        p: A tuple of 3-element lists containing the S, I, and R values of both populations.
+        idx: The index of the desired event.
         '''
         rv = np.add(p, self.Es[idx])
         return tuple([list(rv[i]) for i in [0,1]])
@@ -91,10 +101,10 @@ class SIR_waning(SIR_base):
         Initialises the model with the given parameters.
 
         ### Parameters
-        b: Birth/death rate
-        i: Infection rate
-        r: Recovery rate
-        w: Waning immunity rate
+        bd: Birth/death rate
+        ir: Infection rate
+        rr: Recovery rate
+        wi: Waning immunity rate
         '''
         super().__init__(**kwargs)
         self.Es.append(([1, 0, -1], [0, 0, 0]))
@@ -103,5 +113,3 @@ class SIR_waning(SIR_base):
         R = p1[-1]
         super().setRs(p1, p2)
         self.addR(R*self.wi)
-
-MODEL_TYPES: list[Model] = [SIR_base, SIR_waning]

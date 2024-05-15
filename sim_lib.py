@@ -6,13 +6,13 @@ def simShell(p: tuple[list], tmax: float, mdls: tuple[Model]):
     Manages the time iterations of the simulation.
 
     ### Parameters
-    p: The initial population, as a 3-element list (S, I, R).
+    p: A tuple of 3-element lists containing the S, I, and R values of both populations.
     tmax: The maximum amount of time to run the simulation for.
-    mdl: The model to use.
+    mdls: A tuple containing the models governing each population. (These should differ only in parameter, not model type.)
 
     ### Returns
     ts: A NumPy array of the times visited by the simulation. As it uses a continuous-time Markov chain, they are neither equispaced nor integers.
-    ps: A NumPy array containing all of the population vectors at the various times.
+    ps: A NumPy array that contains the populations (flattened) at each time. Rows contain population, columns contain time.
     '''
     t = 0
     ps = np.array([p[0]+p[1]])
