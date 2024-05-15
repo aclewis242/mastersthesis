@@ -8,8 +8,10 @@ class Model:
     bd = -1.0
     ir = -1.0
     rr = -1.0
+    hsr = -1.0
     Rs = []
     Es = []
+    nm = 'Model'
 
     def __init__(self, **kwargs):
         '''
@@ -27,9 +29,12 @@ class Model:
         E4 = [-1, 0, 0]
         E5 = [0, -1, 0]
         E6 = [0, 0, -1]
-        self.Es = [E1, E2, E3, E4, E5, E6]
+        E7 = [0, 0, 0]
+        Es_raw = [E1, E2, E3, E4, E5, E6, E7]
+        self.Es = [(E, [0, 0, 0]) for E in Es_raw]
+        self.Es[-1] = tuple(np.add(self.Es[-1], ([0, 0, 0], [0, 1, 0])))
     
-    def setRs(self, pop: list):
+    def setRs(self, p1: list, p2: list):
         '''
         Generates the different stochastic probabilities based on the model parameters and the given population.
 
@@ -41,6 +46,7 @@ class Model:
                    1.0,
                    1.0,
                    1.0,
+                   1.0,
                    1.0]
         self.Rs /= sum(self.Rs)
     
@@ -48,34 +54,37 @@ class Model:
         self.Rs.append(r/sum(self.Rs))
         self.Rs = normalise(self.Rs)
 
-    def trans(self, pop: list):
+    def trans(self, p: tuple[list]):
         '''
         Chooses an outcome for a single timestep.
 
         ### Parameters
         pop: A 3-element list containing the susceptible, infected, and recovered populations.
         '''
-        self.setRs(pop)
-        return list(np.add(pop, self.Es[np.random.choice(np.arange(0,len(self.Rs)), p=self.Rs)]))
+        rv = np.add(p, self.Es[np.random.choice(np.arange(0,len(self.Rs)), p=self.Rs)])
+        return tuple([list(rv[i]) for i in [0,1]])
 
 class SIR_base(Model):
     '''
     The standard stochastic SIR model.
     '''
-    def setRs(self, pop: list):
-        [S, I, R] = pop
-        N = sum(pop)
+    nm = 'Base'
+    def setRs(self, p1: list, p2: list):
+        [S, I, R] = p1
+        N = sum(p1)
         self.Rs = normalise([N*self.bd,
                             self.ir*S*I/N,
                             self.rr*I,
                             self.bd*S,
                             self.bd*I,
-                            self.bd*R])
+                            self.bd*R,
+                            self.hsr*I*p2[0]])
 
 class SIR_waning(SIR_base):
     '''
     Stochastic SIR model with waning immunity.
     '''
+    nm = 'Waning'
     wi = -1.0
     def __init__(self, **kwargs):
         '''
@@ -88,11 +97,11 @@ class SIR_waning(SIR_base):
         w: Waning immunity rate
         '''
         super().__init__(**kwargs)
-        self.Es.append([1, 0, -1])
+        self.Es.append(([1, 0, -1], [0, 0, 0]))
 
-    def setRs(self, pop: list):
-        R = pop[-1]
-        super().setRs(pop)
+    def setRs(self, p1: list, p2: list):
+        R = p1[-1]
+        super().setRs(p1, p2)
         self.addR(R*self.wi)
 
 MODEL_TYPES: list[Model] = [SIR_base, SIR_waning]
