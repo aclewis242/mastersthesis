@@ -54,14 +54,14 @@ class Model:
         self.Rs.append(r/sum(self.Rs))
         self.Rs = normalise(self.Rs)
 
-    def trans(self, p: tuple[list]):
+    def trans(self, p: tuple[list], idx: int):
         '''
         Chooses an outcome for a single timestep.
 
         ### Parameters
         pop: A 3-element list containing the susceptible, infected, and recovered populations.
         '''
-        rv = np.add(p, self.Es[np.random.choice(np.arange(0,len(self.Rs)), p=self.Rs)])
+        rv = np.add(p, self.Es[idx])
         return tuple([list(rv[i]) for i in [0,1]])
 
 class SIR_base(Model):
