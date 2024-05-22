@@ -13,6 +13,7 @@ def simShell(p: tuple[list], tmax: float, mdls: tuple[Model]):
     ### Returns
     ts: A NumPy array of the times visited by the simulation. As it uses a continuous-time Markov chain, they are neither equispaced nor integers.
     ps: A NumPy array that contains the populations (flattened) at each time. Rows contain population, columns contain time.
+    ts_hs: A NumPy array containing the times at which host switch events occurred.
     '''
     t = 0
     ps = np.array([p[0]+p[1]])

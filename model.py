@@ -60,9 +60,15 @@ class Model:
         ### Parameters
         p: A tuple of 3-element lists containing the S, I, and R values of both populations.
         idx: The index of the desired event.
+
+        ### Returns
+        p_new: The new population, in the same format as the input.
+        is_hs: A bool for whether or not this was a host switch event.
         '''
         rv = np.add(p, self.Es[idx])
-        return tuple([list(rv[i]) for i in [0,1]]), bool(self.Es[idx][1][1])
+        p_new = tuple([list(rv[i]) for i in [0,1]])
+        is_hs = bool(self.Es[idx][1][1])
+        return p_new, is_hs
 
 class SIR_base(Model):
     '''
@@ -78,7 +84,7 @@ class SIR_base(Model):
                     self.bd*S,
                     self.bd*I,
                     self.bd*R,
-                    self.hsr*I*p2[0]]
+                    self.hsr*I*p2[0]/(N+sum(p2))]
         return self.Rs
 
 class SIR_waning(SIR_base):
