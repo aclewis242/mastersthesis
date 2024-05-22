@@ -17,14 +17,24 @@ def simShell(p: tuple[list], tmax: float, mdls: tuple[Model]):
     t = 0
     ps = np.array([p[0]+p[1]])
     ts = np.array([0])
+    ts_hs = np.array([], dtype=int)
     while t < tmax:
-        [mdls[i].setRs(p[i], p[i-1]) for i in [0,1]]
-        dts = [[np.random.exponential(1/m.Rs[ri]) for ri in range(len(m.Rs))] for m in mdls]
-        dt = np.min(dts)
-        [mi, ei] = [int(np.where(dts == dt)[i][0]) for i in [0,1]]
-        p_new = mdls[mi].trans((p[mi], p[mi-1]), ei)
+        all_Rs = np.array([mdls[i].setRs(p[i], p[i-1]) for i in [0,1]]).flatten()
+        sum_Rs = sum(all_Rs)
+        if not sum_Rs: return ts, ps
+        dt = np.log(1/np.random.rand())/sum_Rs
+        cmpr = np.random.rand()*sum_Rs
+        sat = 0
+        j = -1
+        while sat <= cmpr:
+            j += 1
+            sat += all_Rs[j]
+        len_vec = len(mdls[0].Es)
+        [mi, ei] = [int(j/len_vec), int(j%len_vec)]
+        p_new, is_hs = mdls[mi].trans((p[mi], p[mi-1]), ei)
         p = (p_new[mi], p_new[mi-1])
         t += dt
         ps = np.vstack((ps, p[0]+p[1]))
         ts = np.append(ts, t)
-    return ts, ps
+        if is_hs: ts_hs = np.append(ts_hs, t)
+    return ts, ps, ts_hs

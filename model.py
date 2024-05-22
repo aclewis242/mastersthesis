@@ -33,7 +33,7 @@ class Model:
         E7 = [0, 0, 0]
         Es_raw = [E1, E2, E3, E4, E5, E6, E7]
         self.Es = [(E, [0, 0, 0]) for E in Es_raw]
-        self.Es[-1] = tuple(np.add(self.Es[-1], ([0, 0, 0], [0, 1, 0])))
+        self.Es[-1] = tuple(np.add(self.Es[-1], ([0, 0, 0], [-1, 1, 0])))
     
     def setRs(self, p1: list, p2: list):
         '''
@@ -51,17 +51,7 @@ class Model:
                    1.0,
                    1.0,
                    1.0]
-        self.Rs /= sum(self.Rs)
-    
-    def addR(self, r: float):
-        '''
-        Adds another transition rate to the model.
-
-        ### Parameters
-        r: The rate in question.
-        '''
-        self.Rs.append(r/sum(self.Rs))
-        self.Rs = normalise(self.Rs)
+        return self.Rs
 
     def trans(self, p: tuple[list], idx: int):
         '''
@@ -72,7 +62,7 @@ class Model:
         idx: The index of the desired event.
         '''
         rv = np.add(p, self.Es[idx])
-        return tuple([list(rv[i]) for i in [0,1]])
+        return tuple([list(rv[i]) for i in [0,1]]), bool(self.Es[idx][1][1])
 
 class SIR_base(Model):
     '''
@@ -82,13 +72,14 @@ class SIR_base(Model):
     def setRs(self, p1: list, p2: list):
         [S, I, R] = p1
         N = sum(p1)
-        self.Rs = normalise([N*self.bd,
-                            self.ir*S*I/N,
-                            self.rr*I,
-                            self.bd*S,
-                            self.bd*I,
-                            self.bd*R,
-                            self.hsr*I*p2[0]])
+        self.Rs = [N*self.bd,
+                    self.ir*S*I/N,
+                    self.rr*I,
+                    self.bd*S,
+                    self.bd*I,
+                    self.bd*R,
+                    self.hsr*I*p2[0]]
+        return self.Rs
 
 class SIR_waning(SIR_base):
     '''
@@ -112,4 +103,5 @@ class SIR_waning(SIR_base):
     def setRs(self, p1: list, p2: list):
         R = p1[-1]
         super().setRs(p1, p2)
-        self.addR(R*self.wi)
+        self.Rs.append(R*self.wi)
+        return self.Rs
