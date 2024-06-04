@@ -21,7 +21,7 @@ EPI = {      # Parameters for epidemic behavior (short-lived spikes of infection
 PARAMS_1 = STAB
 PARAMS_2 = EPI
 
-def run(p0: tuple=([2, 1, 0], [2, 0, 0]), p_fac: float=500, t_max: float=2.4):
+def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]]), p_fac: float=500, t_max: float=2.4):
     '''
     Run the simulation.
 
@@ -30,18 +30,20 @@ def run(p0: tuple=([2, 1, 0], [2, 0, 0]), p_fac: float=500, t_max: float=2.4):
     p_fac: The scale factor on population.
     t_max: Maximum simulation time.
     '''
-    p0 = tuple([[p0[pi][ii]*p_fac for ii in range(len(p0[pi]))] for pi in range(len(p0))])
+    p0 *= p_fac
     m1 = SIR(**PARAMS_1)
     m2 = SIR(**PARAMS_2)
     t0 = time.time()
-    ts, ps, ts_hs = simShell(p0, t_max, (m1, m2))
+    ts, ps, ts_hs, times = simShell(p0, t_max, (m1, m2))
     print(f'Execution time: {time.time()-t0}')
+    print('Breakdown:')
+    print(times)
     ns = ['S', 'I', 'R']
     for i_end in [3, 6]:
         if not sum(p0[int(i_end/3)-1]): break
         [plt.plot(ts, ps[:,i], label=ns[i%3]) for i in range(i_end-3,i_end)]
         plt.plot(ts, sum([ps[:,i] for i in range(i_end-3,i_end)]), label='N')
-        plt.scatter(ts_hs, 0*ts_hs, label='Host switches', c='k')
+        plt.scatter(ts_hs, 0*ts_hs, label='Interspecific transmissions', c='k')
         plt.title(f'Population {int(i_end/3)}')
         plt.legend()
         plt.savefig(f'pop_{int(i_end/3)}.png')

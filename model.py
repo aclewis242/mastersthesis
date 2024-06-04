@@ -9,8 +9,9 @@ class SIR:
     bd = -1.0
     ir = -1.0
     rr = -1.0
-    hsr = -1.0
     wi = -1.0
+    itr = -1.0
+    is_hyb = False
     Rs = []
     Es = []
     def __init__(self, **kwargs):
@@ -23,6 +24,7 @@ class SIR:
         rr: Recovery rate
         wi: Waning immunity rate
         itr: Interspecific transmission rate
+        is_hyb: Whether or not the model is hybrid stochastic/deterministic
         '''
         self.__dict__.update(kwargs)
         E1 = [1, 0, 0]  # Birth
@@ -32,10 +34,11 @@ class SIR:
         E5 = [0, -1, 0] # Death of infected
         E6 = [0, 0, -1] # Death of recovered
         E7 = [1, 0, -1] # Waning immunity
-        E8 = [0, 0, 0]  # Interspecific transmission event
+        E8 = [0, 0, 0]  # Interspecific transmission
         Es_raw = [E1, E2, E3, E4, E5, E6, E7, E8]
-        self.Es = [(E, [0, 0, 0]) for E in Es_raw]
-        self.Es[-1] = tuple(np.add(self.Es[-1], ([0, 0, 0], [-1, 1, 0])))
+        self.Es = np.array([[E, [0, 0, 0]] for E in Es_raw])
+        self.Es[-1] = np.add(self.Es[-1], [[0, 0, 0], [-1, 1, 0]])
+        self.Rs = [0 for i in Es_raw]
     
     def setRs(self, p1: list, p2: list):
         '''
@@ -48,6 +51,7 @@ class SIR:
         '''
         [S, I, R] = p1
         N = sum(p1)
+        if not N: return 0*self.Rs
         self.Rs = [N*self.bd,
                     self.ir*S*I/N,
                     self.rr*I,
@@ -55,10 +59,10 @@ class SIR:
                     self.bd*I,
                     self.bd*R,
                     self.wi*R,
-                    self.hsr*I*p2[0]/(N+sum(p2))]
+                    self.itr*I*p2[0]/(N+sum(p2))]
         return self.Rs
 
-    def trans(self, p: tuple[list], idx: int):
+    def trans(self, p: np.ndarray[list], idx: int):
         '''
         Effects the changes in the population dictated by the simulation.
 
@@ -71,6 +75,5 @@ class SIR:
         is_hs: A bool for whether or not this was a host switch event.
         '''
         rv = np.add(p, self.Es[idx])
-        p_new = tuple([list(rv[i]) for i in [0,1]])
         is_hs = bool(self.Es[idx][1][1])
-        return p_new, is_hs
+        return rv, is_hs
