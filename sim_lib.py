@@ -26,7 +26,10 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
     ps[0] = np.array([p.flatten()])
     ts_hs = np.array([], dtype=int)
     times = [0 for i in range(16)]
+    old_sum_Rs = 0
+    len_vec = mdls[0].num_Es
     for i in ts_i:
+        if old_sum_Rs and np.log(1/np.random.rand()) > old_sum_Rs*dt: continue
         tm = time.time()
         all_Rs = np.array([mdls[i].setRs(p[i], p[i-1]) for i in [0,1]]).flatten() # note: figure out how to generalise!
         times[0] += time.time() - tm
@@ -35,7 +38,7 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
         times[1] += time.time() - tm
         tm = time.time()
         if not sum_Rs: break
-        if np.log(1/np.random.rand()) > sum_Rs*dt: continue
+        old_sum_Rs = sum_Rs
         times[2] += time.time() - tm
         tm = time.time()
         # j = np.random.choice(range(sum([m.num_Es for m in mdls])), p=all_Rs/sum_Rs)
@@ -56,7 +59,7 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
         #     sat += all_Rs[j]
         times[7] += time.time() - tm
         tm = time.time()
-        len_vec = mdls[0].num_Es
+        
         times[8] += time.time() - tm
         tm = time.time()
         [mi, ei] = [int(j/len_vec), int(j%len_vec)]
