@@ -21,7 +21,8 @@ EPI = {      # Parameters for epidemic behavior (short-lived spikes of infection
 PARAMS_1 = STAB
 PARAMS_2 = EPI
 
-def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]]), p_fac: float=500, t_max: float=2.4):
+def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e3, t_max: float=2.4, nt: float=2e5,
+        do_t_scale: bool=False):
     '''
     Run the simulation.
 
@@ -31,13 +32,24 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]]), p_fac: float=500, t_max
     t_max: Maximum simulation time.
     '''
     p0 *= p_fac
+    if do_t_scale: t_max *= np.log(p_fac)**1.75 + 1
     m1 = SIR(**PARAMS_1)
     m2 = SIR(**PARAMS_2)
     t0 = time.time()
-    ts, ps, ts_hs, times = simShell(p0, t_max, (m1, m2))
-    print(f'Execution time: {time.time()-t0}')
+    mdls = (m1, m2)
+    sum_Rs_test = sum(np.array([mdls[i].setRs(p0[i], p0[i-1]) for i in [0,1]]).flatten())
+    dt = t_max/(nt - 1)
+    # dt = 0
+    if sum_Rs_test*dt > np.log(2):
+        nt = float(int(t_max/(np.log(2)/sum_Rs_test) + 1))
+        print('WARNING: potentially insufficient number of time steps. More shall be used, but the simulation\'s results may be inaccurate.')
+        print(f'New time step count: {int(nt)}')
+    ts, ps, ts_hs, times = simShell(p0, t_max, mdls, nt)
+    ex_tm = time.time() - t0
+    print(f'Execution time: {ex_tm}')
     print('Breakdown:')
-    print(times)
+    [print(f'{i}:\t{times[i]}') for i in range(len(times))]
+    print(f'Extra time: {ex_tm - sum(times)}')
     ns = ['S', 'I', 'R']
     for i_end in [3, 6]:
         if not sum(p0[int(i_end/3)-1]): break
@@ -46,6 +58,8 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]]), p_fac: float=500, t_max
         plt.scatter(ts_hs, 0*ts_hs, label='Interspecific transmissions', c='k')
         plt.title(f'Population {int(i_end/3)}')
         plt.legend()
+        plt.xlabel('Simulation time')
+        plt.ylabel('Population')
         plt.savefig(f'pop_{int(i_end/3)}.png')
         plt.show()
         plt.close()

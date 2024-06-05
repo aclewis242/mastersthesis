@@ -1,7 +1,7 @@
 import numpy as np
 
-def normalise(l: list[float]) -> list[float]:
+def normalise(l: np.ndarray[float]):
     '''
     !! DEPRECATED !!
     '''
-    return list(np.array(l)/sum(l))
+    return l/sum(l)

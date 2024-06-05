@@ -11,9 +11,11 @@ class SIR:
     rr = -1.0
     wi = -1.0
     itr = -1.0
+    dt = 0.0
     is_hyb = False
     Rs = []
     Es = []
+    num_Es = -1.0
     def __init__(self, **kwargs):
         '''
         Initialises the model with the given parameters.
@@ -38,9 +40,10 @@ class SIR:
         Es_raw = [E1, E2, E3, E4, E5, E6, E7, E8]
         self.Es = np.array([[E, [0, 0, 0]] for E in Es_raw])
         self.Es[-1] = np.add(self.Es[-1], [[0, 0, 0], [-1, 1, 0]])
+        self.num_Es = len(self.Es)
         self.Rs = [0 for i in Es_raw]
     
-    def setRs(self, p1: list, p2: list):
+    def setRs(self, p1: list[int], p2: list[int]):
         '''
         Generates the different transition rates based on the model parameters and the given populations.
 
@@ -51,7 +54,8 @@ class SIR:
         '''
         [S, I, R] = p1
         N = sum(p1)
-        if not N: return 0*self.Rs
+        S = float(S)
+        if not N: return [0 for r in self.Rs]
         self.Rs = [N*self.bd,
                     self.ir*S*I/N,
                     self.rr*I,
