@@ -24,51 +24,48 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
     ts_i = np.array(range(nt))
     ps = np.empty(shape=(nt, len(p.flatten())))
     ps[0] = np.array([p.flatten()])
-    ts_hs = np.array([], dtype=int)
     times = [0 for i in range(16)]
-    old_sum_Rs = 0
     len_vec = mdls[0].num_Es
     for i in ts_i:
-        if old_sum_Rs and np.log(1/np.random.rand()) > old_sum_Rs*dt: continue
         tm = time.time()
         all_Rs = np.array([mdls[i].setRs(p[i], p[i-1]) for i in [0,1]]).flatten() # note: figure out how to generalise!
+        # print(f'p: {p}')
         times[0] += time.time() - tm
         tm = time.time()
         sum_Rs = sum(all_Rs)
         times[1] += time.time() - tm
         tm = time.time()
         if not sum_Rs: break
-        old_sum_Rs = sum_Rs
         times[2] += time.time() - tm
         tm = time.time()
-        # j = np.random.choice(range(sum([m.num_Es for m in mdls])), p=all_Rs/sum_Rs)
-        j = random.choices(range(sum([m.num_Es for m in mdls])), weights=all_Rs/sum_Rs)[0]
+        # print(f'all_Rs: {all_Rs}')
+        Xs = adaptSim(all_Rs/sum_Rs, sum_Rs, dt)        
         times[3] += time.time() - tm
+        is_hs = False
+        # print(f'Xs: {Xs}')
+        for i_x in range(2*len_vec):
+            tm = time.time()
+            mi = int(i_x/len_vec)
+            ei = i_x%len_vec
+            p_new, is_hs_new = mdls[mi].trans((p[mi], p[mi-1]), ei, Xs[i_x])
+            times[4] += time.time() - tm
+            tm = time.time()
+            is_hs = is_hs or is_hs_new
+            p = np.array([p_new[mi], p_new[mi-1]])
+            times[5] += time.time() - tm
         tm = time.time()
-        # all_Rs/sum_Rs
-        times[4] += time.time() - tm
-        tm = time.time()
-        # range(sum([m.num_Es for m in mdls]))
-        times[5] += time.time() - tm
-        tm = time.time()
-        # j = -1
         times[6] += time.time() - tm
         tm = time.time()
-        # while sat <= cmpr:
-        #     j += 1
-        #     sat += all_Rs[j]
+        
         times[7] += time.time() - tm
         tm = time.time()
         
         times[8] += time.time() - tm
         tm = time.time()
-        [mi, ei] = [int(j/len_vec), int(j%len_vec)]
         times[9] += time.time() - tm
         tm = time.time()
-        p_new, is_hs = mdls[mi].trans((p[mi], p[mi-1]), ei)
         times[10] += time.time() - tm
         tm = time.time()
-        p = np.array([p_new[mi], p_new[mi-1]])
         times[11] += time.time() - tm
         tm = time.time()
         # t += dt
@@ -81,15 +78,26 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
         tm = time.time()
         # ts = np.append(ts, t)
         times[14] += time.time() - tm
-        tm = time.time()
-        if is_hs: ts_hs = np.append(ts_hs, i*dt)
-        times[15] += time.time() - tm
     tm = time.time()
-    num_skips = 0
-    for p_i in range(nt):
-        if not int(sum(ps[p_i])):
-            ps[p_i] = ps[p_i-1]
-            num_skips += 1
     print(f'Filling out array time: {time.time()-tm}')
-    print(f'Num. skips: {num_skips}')
-    return ts_i*dt, ps, ts_hs, times
+    return ts_i*dt, ps, times
+
+def adaptSim(ps, sum_Rs, dt: float):
+    Xs = 0*ps
+    p_cond = 0
+    rng = np.random.default_rng()
+    # N = int(sum_Rs*dt)
+    for i in range(len(ps)):
+        if p_cond >= 1 or N <= 0: break
+        p = ps[i]/(1 - p_cond)
+        if p > 1: p = int(p)# ; print(p)
+        if p < 0: p = 0
+        if N > 1000 and (p > 0.2 and p < 0.8): Xs[i] = int(N*p)
+        elif N > 100:
+            if N*p < 25: Xs[i] = rng.poisson(lam=N*p) # print(f'N: {N}; p: {p}'); 
+            elif N*(1-p) < 25: Xs[i] = N - rng.poisson(lam=N*p)# ; print(f'neg check: {Xs[i]}')
+            else: Xs[i] = int(rng.normal(loc=N*p, scale=N*p*(1-p)))# ; print(f'Xs[i]: {Xs[i]}')
+        else: Xs[i] = rng.binomial(n=N, p=p)
+        N -= Xs[i-1]
+        p_cond += ps[i]
+    return Xs

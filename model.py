@@ -1,4 +1,5 @@
 from func_lib import *
+from operator import add
 import numpy as np
 
 class SIR:
@@ -38,8 +39,9 @@ class SIR:
         E7 = [1, 0, -1] # Waning immunity
         E8 = [0, 0, 0]  # Interspecific transmission
         Es_raw = [E1, E2, E3, E4, E5, E6, E7, E8]
-        self.Es = np.array([[E, [0, 0, 0]] for E in Es_raw])
-        self.Es[-1] = np.add(self.Es[-1], [[0, 0, 0], [-1, 1, 0]])
+        self.Es = [[E, [0, 0, 0]] for E in Es_raw]
+        m = [[0, 0, 0], [-1, 1, 0]]
+        self.Es[-1] = [list(map(add, self.Es[-1][i], m[i])) for i in (0,1)]
         self.num_Es = len(self.Es)
         self.Rs = [0 for i in Es_raw]
     
@@ -53,8 +55,10 @@ class SIR:
         p2: As above, but for the other population.
         '''
         [S, I, R] = p1
-        N = sum(p1)
-        S = float(S)
+        S = float(int(S))
+        I = float(int(I))
+        R = float(int(R))
+        N = S + I + R
         if not N: return [0 for r in self.Rs]
         self.Rs = [N*self.bd,
                     self.ir*S*I/N,
@@ -66,7 +70,7 @@ class SIR:
                     self.itr*I*p2[0]/(N+sum(p2))]
         return self.Rs
 
-    def trans(self, p: np.ndarray[list], idx: int):
+    def trans(self, p: list[list], idx: int, rpt: int=1):
         '''
         Effects the changes in the population dictated by the simulation.
 
@@ -78,6 +82,8 @@ class SIR:
         p_new: The new population, in the same format as the input.
         is_hs: A bool for whether or not this was a host switch event.
         '''
-        rv = np.add(p, self.Es[idx])
+        # rv = list(map(add, p, list(map(lambda x:list(map(lambda y: float(rpt)*x, self.Es[idx]))))
+        # print(f'test: {list(map(lambda x: list(map(lambda y: float(rpt)*y, x)), self.Es[idx]))}')
+        rv = list(map(add, p, list(map(lambda x: list(map(lambda y: float(rpt)*y, x)), self.Es[idx]))))
         is_hs = bool(self.Es[idx][1][1])
         return rv, is_hs
