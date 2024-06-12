@@ -12,17 +12,19 @@ STAB = {     # Parameters for stable behavior (equilibrium)
 }
 EPI = {      # Parameters for epidemic behavior (short-lived spikes of infection)
     'bd': 0,        # Birth/death rate
-    'ir': 4e4,      # Infection rate
-    'rr': 3.1e3,      # Recovery rate
-    'wi': 3.5e3,       # Waning immunity rate
+    'ir': 4e3,      # Infection rate
+    'rr': 1e3,      # Recovery rate
+    'wi': 7e1,       # Waning immunity rate
     'itr': 0.00,    # Interspecific transmission rate
 }
+
+# for p_fac of 5e4: epidemic params are 4e3, 1e3, 7e1 for ir, rr, wi respectively
 
 PARAMS_1 = STAB
 PARAMS_2 = EPI
 
 def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e4, t_max: float=1, nt: float=2e4,
-        do_t_scale: bool=False):
+        do_par_scale: bool=False):
     '''
     Run the simulation.
 
@@ -30,9 +32,14 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [2, 0, 0]], dtype='float64'), p_fac:
     p0: The initial population ratios (S, I, R) as a tuple.
     p_fac: The scale factor on population.
     t_max: Maximum simulation time.
+    nt: The number of time steps to use.
+    do_par_scale: Whether or not to scale population 2's parameter set to match population 1's set. This will generally produce 'cleaner'
+                  results, though epidemic behavior is not likely to be seen.
     '''
     p0 *= p_fac
-    if do_t_scale: t_max *= np.log(p_fac)**1.75 + 1
+    if do_par_scale:
+        scale_factor = sum(PARAMS_1.values())/sum(PARAMS_2.values())
+        for k in PARAMS_2.keys(): PARAMS_2[k] *= scale_factor
     m1 = SIR(**PARAMS_1)
     m2 = SIR(**PARAMS_2)
     t0 = time.time()

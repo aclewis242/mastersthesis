@@ -77,13 +77,12 @@ class SIR:
         ### Parameters
         p: A tuple of 3-element lists containing the S, I, and R values of both populations.
         idx: The index of the desired event.
+        rpt: The number of times to repeat said event.
 
         ### Returns
         p_new: The new population, in the same format as the input.
         is_hs: A bool for whether or not this was a host switch event.
         '''
-        # rv = list(map(add, p, list(map(lambda x:list(map(lambda y: float(rpt)*x, self.Es[idx]))))
-        # print(f'test: {list(map(lambda x: list(map(lambda y: float(rpt)*y, x)), self.Es[idx]))}')
         rv = list(map(add, p, list(map(lambda x: list(map(lambda y: float(rpt)*y, x)), self.Es[idx]))))
         is_hs = bool(self.Es[idx][1][1])
         return rv, is_hs
