@@ -3,7 +3,7 @@ import numpy as np
 import time
 import random
 
-def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
+def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5):
     '''
     Manages the time iterations of the simulation.
 
@@ -20,14 +20,23 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
     '''
     dt = tmax/(nt - 1)
     nt = int(nt)
+    [m.setRs() for m in mdls]
     ts_i = np.array(range(nt))
-    ps = np.empty(shape=(nt, len(p.flatten())))
-    ps[0] = np.array([p.flatten()])
+    ps = np.empty(shape=(nt, len(mdls), 3))
+    ps[0] = np.array([m.pop for m in mdls])
     times = [0 for i in range(16)]
-    len_vec = mdls[0].num_Es
+    num_mdls = len(mdls)
+    num_Rs = len(mdls[0].Rs)
+    all_Rs = np.array([0.0 for i in range(num_mdls*num_Rs)])
     for i in ts_i:
         tm = time.time()
-        all_Rs = np.array([mdls[i].setRs(p[i], p[i-1]) for i in [0,1]]).flatten() # note: figure out how to generalise!
+        # all_Rs = np.array([mdls[i].setRs(p[i], p[i-1]) for i in [0,1]]).flatten() # note: figure out how to generalise!
+        # print(f'1st Rs: {mdls[0].Rs}')
+        for j in range(num_mdls):
+            mdls[j].setRs()
+            for k in range(num_Rs):
+                all_Rs[j*num_Rs+k] = mdls[j].Rs[k]
+        # print(f'all_Rs: {all_Rs}')
         times[0] += time.time() - tm # a little expensive
         tm = time.time()
         sum_Rs = sum(all_Rs)
@@ -36,19 +45,27 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
         if not sum_Rs: break
         times[2] += time.time() - tm
         tm = time.time()
-        Xs = adaptSim(all_Rs/sum_Rs, sum_Rs, dt)        
+        Xs = adaptSim(all_Rs/sum_Rs, sum_Rs, dt)
+        # print(f'all_Xs: {Xs}')
         times[3] += time.time() - tm # 2nd most expensive
-        is_hs = False
-        for i_x in range(2*len_vec):
-            tm = time.time()
-            mi = int(i_x/len_vec)
-            ei = i_x%len_vec
-            p_new, is_hs_new = mdls[mi].trans((p[mi], p[mi-1]), ei, Xs[i_x])
-            times[4] += time.time() - tm # most expensive
-            tm = time.time()
-            is_hs = is_hs or is_hs_new
-            p = np.array([p_new[mi], p_new[mi-1]])
-            times[5] += time.time() - tm # kind of expensive
+        # for i_x in range(num_mdls*num_Rs):
+        #     tm = time.time()
+        #     mi = int(i_x/num_Rs)
+        #     ei = i_x%num_Rs
+        #     p_new = mdls[mi].trans(ei, Xs[i_x])
+        #     times[4] += time.time() - tm # most expensive
+        #     tm = time.time()
+        #     ps[i][i_x] = p_new
+        #     times[5] += time.time() - tm # kind of expensive
+        for i_m in range(num_mdls):
+            for i_r in range(num_Rs):
+                tm = time.time()
+                mdls[i_m].trans(i_r, Xs[i_m*num_Rs+i_r])
+                times[4] += time.time() - tm
+        tm = time.time()
+        for i_m in range(num_mdls):
+            ps[i][i_m] = mdls[i_m].pop
+        times[5] += time.time() - tm
         tm = time.time()
         times[6] += time.time() - tm
         tm = time.time()
@@ -66,7 +83,6 @@ def simShell(p: np.ndarray[list], tmax: float, mdls: tuple[SIR], nt: float=2e5):
         tm = time.time()
         times[12] += time.time() - tm
         tm = time.time()
-        ps[i] = p.flatten()
         times[13] += time.time() - tm
         tm = time.time()
         times[14] += time.time() - tm
@@ -91,7 +107,7 @@ def adaptSim(ps: np.ndarray[float], sum_Rs: float, dt: float):
         p = ps[i]/(1 - p_cond)
         if p > 1: p = int(p)
         if p < 0: p = 0
-        if N > 1000 and (p > 0.2 and p < 0.8): Xs[i] = int(N*p)     # Deterministic case
+        if N > 1000 and (p > 0.1 and p < 0.9): Xs[i] = int(N*p)     # Deterministic case
         elif N > 200:
             if N*p < 25: Xs[i] = rng.poisson(lam=N*p)               # Large-ish N, p close to 0
             elif N*(1-p) < 25: Xs[i] = N - rng.poisson(lam=N*p)     # Large-ish N, p close to 1
