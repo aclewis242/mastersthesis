@@ -19,25 +19,28 @@ EPI = {         # Parameters for epidemic behavior (short-lived spikes of infect
     'nm': 'Epidemic'
 }
 VEC = {         # Parameters for transmission vector behavior (mosquito)
-    'bd': 0.0385, # corresponding to a life cycle of ~2 weeks
+    'bd': 1.0,  # Defined as 1 birth/death event per month
     'ir': 0.,
     'rr': 0,
     'wi': 0.,
-    'nm': 'Vector'
+    'pn': 'Vector',
+    'sn': 'init'
 }
 HST1 = {        # Parameters for sustained host 1 & vector behavior
     'bd': 0.,
     'ir': 0.,
     'rr': 40.,
     'wi': 20.,
-    'nm': 'Host 1 (stable)'
+    'pn': 'Host 1 (stable)',
+    'sn': 'init'
 }
-HST2 = {        # Parameters for epidemic host 2 & vector behavior
+HST2 = {        # Parameters for extinction host 2 & vector behavior
     'bd': 0.,
     'ir': 0.,
-    'rr': 8e1,
-    'wi': 6.,
-    'nm': 'Host 2 (epidemic)'
+    'rr': 5e2,
+    'wi': 3.,
+    'pn': 'Host 2 (extinction)',
+    'sn': 'init'
 }
 
 # for p_fac of 5e4, nt 2e4: epidemic params are 4e3, 1e3, 7e1 for ir, rr, wi respectively (stab/epi)
@@ -46,49 +49,48 @@ PARAMS_1 = HST1
 PARAMS_2 = VEC
 PARAMS_3 = HST2
 
-def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e4, t_max: float=1, nt: float=5e4,
-        do_par_scale: bool=False):
+def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e4, t_max: float=1., nt: float=5e4,
+        plot_res: bool=True):
     '''
     Run the simulation.
 
     ### Parameters
     p0: The initial population ratios (S, I, R) as a NumPy array of 3-element NumPy arrays.
     p_fac: The scale factor on population.
-    t_max: Maximum simulation time. Scaled according to years.
-    nt: The number of time steps to use. Generally speaking, this should run roughly parallel with p_fac.
+    t_max: Maximum simulation time.
+    nt: The number of time steps to use. Generally speaking, this should run roughly parallel with p_fac & t_max.
     do_par_scale: Whether or not to scale population 2's parameter set to match population 1's set. This will generally produce 'cleaner'
         results, though epidemic behavior is not likely to be seen. !! LEGACY !!
     '''
     p0 *= p_fac
-    if do_par_scale: # vestigial
-        scale_factor = sum(PARAMS_1.values())/sum(PARAMS_2.values())
-        for k in PARAMS_2.keys(): PARAMS_2[k] *= scale_factor
-    m1 = SIR(p0[0], **PARAMS_1)
-    m2 = SIR(p0[1], **PARAMS_2)
-    m3 = SIR(p0[2], **PARAMS_3)
-    m1.itr = {m2: 500., m3: 0.} # the number represents the rate at which its model infects m1
-    m2.itr = {m1: 120., m3: 100.}
-    m3.itr = {m1: 0., m2: 1e4}
+    [p0_1, p0_2, p0_3] = [population(p0[i]) for i in range(3)]
+    m1 = SIR(p0_1, **PARAMS_1)
+    m2 = SIR(p0_2, **PARAMS_2)
+    m3 = SIR(p0_3, **PARAMS_3)
+    m1.itr = {p0_2: 500., p0_3: 0.} # the number represents the rate at which its model infects m1
+    m2.itr = {p0_1: 120., p0_3: 100.} # temp: actually treating it as m1's pop/strain ir for relevant pop (see how this goes)
+    m3.itr = {p0_1: 0., p0_2: 1e2}
     t0 = time.time()
     mdls = (m1, m2, m3)
-    ts, ps, times = simShell(t_max, mdls, nt)
+    ts, ps, times, pops = simShell(t_max, mdls, nt)
     ex_tm = time.time() - t0
     times_norm = list(100*normalise(np.array(times)))
     print(f'Execution time: {ex_tm}')
     print('Breakdown:')
     [print(f'{i}:\t{times_norm[i]}') for i in range(len(times))]
     print(f'Extra time: {ex_tm - sum(times)}')
-    ns = ['S', 'I', 'R']
-    for i in range(len(ps[0])):
-        [plt.plot(ts, ps[:,i][:,j], label=ns[j]) for j in range(3)]
+    for i in range(len(mdls)):
+        ns = pops[i].getAllPopNms()
+        [plt.plot(ts, ps[:,i][:,j], label=ns[j]) for j in range(len(ns))]
         plt.plot(ts, sum(ps[:,i].transpose()), label='N')
-        plt.title(f'{mdls[i].nm} population')
+        plt.title(f'{mdls[i].pn} population')
         plt.legend()
         plt.xlabel('Simulation time')
         plt.ylabel('Population')
-        plt.savefig(f'{fn(mdls[i].nm)}_t{nt}.png')
-        plt.show()
+        plt.savefig(f'{fn(mdls[i].pn)}_t{nt}.png')
+        if plot_res: plt.show()
         plt.close()
+    return ps
 
 if __name__ == '__main__':
     run()

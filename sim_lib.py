@@ -3,7 +3,7 @@ import numpy as np
 import time
 import random
 
-def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5):
+def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5, max_strains: int=10):
     '''
     Manages the time iterations of the simulation.
 
@@ -21,16 +21,16 @@ def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5):
     nt = int(nt)
     [m.setRs() for m in mdls]
     ts_i = np.array(range(int(nt)))
-    ps = np.empty(shape=(nt, len(mdls), 3))
-    ps[0] = np.array([m.pop for m in mdls])
+    ps = np.empty(shape=(nt, len(mdls)*max_strains, 3))
+    pops = [m.pop for m in mdls]
+    num_pops = len(pops)
     times = [0 for i in range(16)]
-    num_mdls = len(mdls)
     num_Rs = len(mdls[0].Rs)
-    all_Rs = np.array([0.0 for i in range(num_mdls*num_Rs)])
+    all_Rs = np.array([0.0 for i in range(len(mdls)*max_strains*num_Rs)])
 
     for i in ts_i:
         tm = time.time()
-        for j in range(num_mdls):
+        for j in range(len(mdls)):
             mdls[j].setRs()
             for k in range(num_Rs):
                 all_Rs[j*num_Rs+k] = mdls[j].Rs[k]
@@ -44,14 +44,14 @@ def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5):
         tm = time.time()
         Xs = adaptSim(all_Rs/sum_Rs, sum_Rs, dt)
         times[3] += time.time() - tm # most expensive
-        for i_m in range(num_mdls):
+        for i_m in range(len(mdls)):
             for i_r in range(num_Rs):
                 tm = time.time()
                 mdls[i_m].trans(i_r, Xs[i_m*num_Rs+i_r])
                 times[4] += time.time() - tm # 2nd most expensive
         tm = time.time()
-        for i_m in range(num_mdls):
-            ps[i][i_m] = mdls[i_m].pop
+        for i_p in range(num_pops):
+            ps[i][i_p] = pops[i_p].getAllPop()
         times[5] += time.time() - tm
         # All remaining measurement blocks are left over from a more complicated and inefficient time
         # Preserved in case they prove useful sometime in the future
@@ -75,7 +75,7 @@ def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5):
         times[13] += time.time() - tm
         tm = time.time()
         times[14] += time.time() - tm
-    return ts_i*dt, ps, times
+    return ts_i*dt, ps, times, pops
 
 def adaptSim(ps: np.ndarray[float], sum_Rs: float, dt: float):
     '''

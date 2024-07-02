@@ -1,12 +1,13 @@
 from func_lib import *
+from population import *
 from operator import add
-import numpy as np
 
 class SIR:
     '''
     The stochastic SIR model class.
     '''
-    nm = ''
+    pn = ''
+    sn = ''
     bd = -1.0
     ir = -1.0
     rr = -1.0
@@ -15,9 +16,8 @@ class SIR:
     dt = 0.0
     Rs = []
     Es = []
-    pop = [-1, -1, -1]
     num_Es = -1.0
-    def __init__(self, p0: list[int], **kwargs):
+    def __init__(self, p0: population, **kwargs):
         '''
         Initialises the model with the given parameters.
 
@@ -31,6 +31,7 @@ class SIR:
         '''
         self.pop = p0
         self.__dict__.update(kwargs)
+        self.pop.pn = self.pn
         E1 = [1, 0, 0]  # Birth
         E2 = [-1, 1, 0] # Infection
         E3 = [0, -1, 1] # Recovery
@@ -45,7 +46,7 @@ class SIR:
         '''
         Generates the different transition rates based on the model's parameters and population.
         '''
-        [S, I, R] = self.pop
+        [S, I, R] = self.pop.getPop()
         S = float(int(S))
         I = float(int(I))
         R = float(int(R))
@@ -57,7 +58,7 @@ class SIR:
                     self.bd*S,
                     self.bd*I,
                     self.bd*R,
-                    self.wi*R] + [self.itr[p2]*I*p2.pop[0]/(N+sum(p2.pop)) for p2 in self.itr]
+                    self.wi*R] + [self.itr[p2]*I*p2.sus/(N+sum(p2.getPop(self.sn))) for p2 in self.itr]
         return self.Rs
 
     def trans(self, idx: int, rpt: int=1):
@@ -68,9 +69,9 @@ class SIR:
         idx: The index of the desired event, corresponding with the order of Rs.
         rpt: The number of times to repeat said event.
         '''
-        mdl = self
+        pop = self.pop
         if idx >= 7:
-            mdl = list(self.itr.keys())[idx-7]
+            pop = list(self.itr.keys())[idx-7]
             idx = 1
-        mdl.pop = list(map(add, mdl.pop, list(map(lambda x: float(rpt)*x, self.Es[idx]))))
-        return self.pop
+        pop.addPop(list(map(lambda x: float(rpt)*x, self.Es[idx])), self.sn)
+        return self.pop.getPop(self.sn)
