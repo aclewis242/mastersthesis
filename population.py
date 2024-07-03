@@ -30,7 +30,7 @@ class population:
     def addStrain(self, nsn: str):
         # print(f'adding strain {nsn}; existing are {self.inf.keys()}')
         if nsn in self.inf.keys(): return
-        self.inf[nsn] = 1e3
+        self.inf[nsn] = int(0.5*sum(self.inf.values()))
         self.rec[nsn] = 0
     
     def __str__(self):

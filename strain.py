@@ -9,7 +9,7 @@ def makeNewStrain(mdls: list[SIR], src_sn: str='init', new_sn: str='new', is_dyn
         if m.sn == src_sn: new_mdls += [m.newStrain(new_sn, is_dyn)]
     return mdls + new_mdls
 
-def mutateDyn(mdls: list[SIR], fav_pop: str, unf_pop: str, sn: str='new', fac: float=0.3):
+def mutateDyn(mdls: list[SIR], fav_pop: str, unf_pop: str, sn: str='new', fac: float=0.2):
     mut_fav = None
     mut_unf = None
     for m in mdls:

@@ -50,7 +50,7 @@ PARAMS_2 = VEC
 PARAMS_3 = HST2
 
 def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e4, t_max: float=1., nt: float=5e4,
-        plot_res: bool=True, is_dyn: bool=True, mr: float=100.):
+        plot_res: bool=True, is_dyn: bool=True, mr: float=20., t_scale: float=3.):
     '''
     Run the simulation.
 
@@ -63,6 +63,8 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='floa
         results, though epidemic behavior is not likely to be seen. !! LEGACY !!
     '''
     p0 *= p_fac
+    t_max *= t_scale
+    nt = float(int(nt*t_scale))
     [p0_1, p0_2, p0_3] = [population(p0[i]) for i in range(3)]
     m1 = SIR(p0_1, **PARAMS_1)
     m2 = SIR(p0_2, **PARAMS_2)
