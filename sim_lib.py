@@ -1,9 +1,10 @@
 from model import *
+from strain import *
 import numpy as np
 import time
 import random
 
-def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5, max_strains: int=10):
+def simShell(tmax: float, mdls: list[SIR], nt: float=2e5, is_dyn: bool=None, fav_pop: str='', unf_pop: str='', mr: float=10.):
     '''
     Manages the time iterations of the simulation.
 
@@ -19,14 +20,15 @@ def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5, max_strains: int=10):
     '''
     dt = tmax/(nt - 1)
     nt = int(nt)
+    if is_dyn: mdls = makeNewStrain(mdls, is_dyn=True)
     [m.setRs() for m in mdls]
     ts_i = np.array(range(int(nt)))
-    ps = np.empty(shape=(nt, len(mdls)*max_strains, 3))
+    ps = np.empty(shape=(nt, len(mdls), len(mdls[0].pop.getAllPop())))
     pops = [m.pop for m in mdls]
     num_pops = len(pops)
     times = [0 for i in range(16)]
     num_Rs = len(mdls[0].Rs)
-    all_Rs = np.array([0.0 for i in range(len(mdls)*max_strains*num_Rs)])
+    all_Rs = np.array([0.0 for i in range(len(mdls)*num_Rs)])
 
     for i in ts_i:
         tm = time.time()
@@ -55,6 +57,10 @@ def simShell(tmax: float, mdls: tuple[SIR], nt: float=2e5, max_strains: int=10):
         times[5] += time.time() - tm
         # All remaining measurement blocks are left over from a more complicated and inefficient time
         # Preserved in case they prove useful sometime in the future
+        if is_dyn and random.random() < mr*dt:
+            mutateDyn(mdls, fav_pop, unf_pop)
+            # print(f'time: {i*dt}')
+            # [print(p.getAllPop()) for p in pops]
         tm = time.time()
         times[6] += time.time() - tm
         tm = time.time()

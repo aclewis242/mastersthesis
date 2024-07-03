@@ -24,7 +24,7 @@ VEC = {         # Parameters for transmission vector behavior (mosquito)
     'rr': 0,
     'wi': 0.,
     'pn': 'Vector',
-    'sn': 'init'
+    'sn': 'init',
 }
 HST1 = {        # Parameters for sustained host 1 & vector behavior
     'bd': 0.,
@@ -32,7 +32,7 @@ HST1 = {        # Parameters for sustained host 1 & vector behavior
     'rr': 40.,
     'wi': 20.,
     'pn': 'Host 1 (stable)',
-    'sn': 'init'
+    'sn': 'init',
 }
 HST2 = {        # Parameters for extinction host 2 & vector behavior
     'bd': 0.,
@@ -40,7 +40,7 @@ HST2 = {        # Parameters for extinction host 2 & vector behavior
     'rr': 5e2,
     'wi': 3.,
     'pn': 'Host 2 (extinction)',
-    'sn': 'init'
+    'sn': 'init',
 }
 
 # for p_fac of 5e4, nt 2e4: epidemic params are 4e3, 1e3, 7e1 for ir, rr, wi respectively (stab/epi)
@@ -50,7 +50,7 @@ PARAMS_2 = VEC
 PARAMS_3 = HST2
 
 def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e4, t_max: float=1., nt: float=5e4,
-        plot_res: bool=True):
+        plot_res: bool=True, is_dyn: bool=True, mr: float=100.):
     '''
     Run the simulation.
 
@@ -71,8 +71,8 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='floa
     m2.itr = {p0_1: 120., p0_3: 100.} # temp: actually treating it as m1's pop/strain ir for relevant pop (see how this goes)
     m3.itr = {p0_1: 0., p0_2: 1e2}
     t0 = time.time()
-    mdls = (m1, m2, m3)
-    ts, ps, times, pops = simShell(t_max, mdls, nt)
+    mdls = [m1, m2, m3]
+    ts, ps, times, pops = simShell(t_max, mdls, nt, is_dyn, HST2['pn'], HST1['pn'], mr)
     ex_tm = time.time() - t0
     times_norm = list(100*normalise(np.array(times)))
     print(f'Execution time: {ex_tm}')

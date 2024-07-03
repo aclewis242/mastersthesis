@@ -13,10 +13,12 @@ class SIR:
     rr = -1.0
     wi = -1.0
     itr = {}
+    mr = 0.0
     dt = 0.0
     Rs = []
     Es = []
     num_Es = -1.0
+    does_mutate = False
     def __init__(self, p0: population, **kwargs):
         '''
         Initialises the model with the given parameters.
@@ -32,6 +34,7 @@ class SIR:
         self.pop = p0
         self.__dict__.update(kwargs)
         self.pop.pn = self.pn
+        self.pop.addStrain(self.sn)
         E1 = [1, 0, 0]  # Birth
         E2 = [-1, 1, 0] # Infection
         E3 = [0, -1, 1] # Recovery
@@ -46,7 +49,7 @@ class SIR:
         '''
         Generates the different transition rates based on the model's parameters and population.
         '''
-        [S, I, R] = self.pop.getPop()
+        [S, I, R] = self.pop.getPop(self.sn)
         S = float(int(S))
         I = float(int(I))
         R = float(int(R))
@@ -58,7 +61,7 @@ class SIR:
                     self.bd*S,
                     self.bd*I,
                     self.bd*R,
-                    self.wi*R] + [self.itr[p2]*I*p2.sus/(N+sum(p2.getPop(self.sn))) for p2 in self.itr]
+                    self.wi*R] + [self.itr[p2]*I*p2.sus/(N+sum(p2.getAllPop())) for p2 in self.itr]
         return self.Rs
 
     def trans(self, idx: int, rpt: int=1):
@@ -75,3 +78,22 @@ class SIR:
             idx = 1
         pop.addPop(list(map(lambda x: float(rpt)*x, self.Es[idx])), self.sn)
         return self.pop.getPop(self.sn)
+    
+    def newStrain(self, nsn='new', dm=False):
+        new_mdl = SIR(self.pop, sn=nsn)
+        new_mdl.__dict__.update(self.__dict__)
+        new_mdl.sn = nsn
+        new_mdl.does_mutate = dm
+        return new_mdl
+    
+    def mutate(self, param: str, fac: float):
+        if type(self.__dict__[param]) is dict:
+            for k in self.__dict__[param]: self.__dict__[param][k] *= fac
+        else:
+            self.__dict__[param] *= fac
+    
+    def __str__(self):
+        return f'population {self.pn}, strain {self.sn}'
+    
+    def __repr__(self):
+        return self.__str__()
