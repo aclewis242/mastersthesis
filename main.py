@@ -1,4 +1,6 @@
 from sim_lib import *
+from allele import *
+from color import *
 import matplotlib.pyplot as plt
 import time
 
@@ -23,34 +25,50 @@ VEC = {         # Parameters for transmission vector behavior (mosquito)
     'ir': 0.,
     'rr': 0,
     'wi': 0.,
-    'pn': 'Vector',
+    'pn': 'vec',
+    'pn_full': 'Vector',
     'sn': 'init',
+    'mr': 1e-2,
 }
 HST1 = {        # Parameters for sustained host 1 & vector behavior
     'bd': 0.,
     'ir': 0.,
     'rr': 40.,
     'wi': 20.,
-    'pn': 'Host 1 (stable)',
+    'pn': 'h1',
+    'pn_full': 'Host 1 (stable)',
     'sn': 'init',
+    'mr': 1e-2,
 }
 HST2 = {        # Parameters for extinction host 2 & vector behavior
     'bd': 0.,
     'ir': 0.,
     'rr': 5e2,
-    'wi': 3.,
-    'pn': 'Host 2 (extinction)',
+    'wi': 30.,
+    'pn': 'h2',
+    'pn_full': 'Host 2 (extinction)',
     'sn': 'init',
+    'mr': 1e-2,
 }
 
 # for p_fac of 5e4, nt 2e4: epidemic params are 4e3, 1e3, 7e1 for ir, rr, wi respectively (stab/epi)
+
+# When providing allele factors: 'good' traits should be positive, 'bad' traits should be negative
+# ('good' meaning 'increasing it increases total # infections')
+A = allele(char='A', fav_pop='h1', unf_pop='h2', param='itr', fac=0.95)
+a = allele(char='a', fav_pop='h2', unf_pop='h1', param='rr', fac=-0.95)
+B = allele(char='B', fav_pop='h1', unf_pop='h2', param='wi', fac=0.5)
+b = allele(char='b', fav_pop='h2', unf_pop='h1', param='wi', fac=0.5)
+C = allele(char='C', fav_pop='h1', unf_pop='h2', param='rr', fac=-0.6)
+c = allele(char='c', fav_pop='h2', unf_pop='h1', param='itr', fac=0.75)
+ALLELES = [A, a, B, b]
 
 PARAMS_1 = HST1
 PARAMS_2 = VEC
 PARAMS_3 = HST2
 
 def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='float64'), p_fac: float=5e4, t_max: float=1., nt: float=5e4,
-        plot_res: bool=True, is_dyn: bool=True, mr: float=20., t_scale: float=3.):
+        plot_res: bool=True, t_scale: float=20., do_allele_mod: bool=True):
     '''
     Run the simulation.
 
@@ -59,9 +77,12 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='floa
     p_fac: The scale factor on population.
     t_max: Maximum simulation time.
     nt: The number of time steps to use. Generally speaking, this should run roughly parallel with p_fac & t_max.
-    do_par_scale: Whether or not to scale population 2's parameter set to match population 1's set. This will generally produce 'cleaner'
-        results, though epidemic behavior is not likely to be seen. !! LEGACY !!
+    plot_res: Whether or not to display the results' graph, as a bool.
+    t_scale: The scale factor on the time. Change this to change simulation length.
+    do_allele_mod: Whether or not to use the allele-based mutation model, as a bool.
     '''
+    alleles = []
+    if do_allele_mod: alleles = ALLELES
     p0 *= p_fac
     t_max *= t_scale
     nt = float(int(nt*t_scale))
@@ -69,12 +90,12 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='floa
     m1 = SIR(p0_1, **PARAMS_1)
     m2 = SIR(p0_2, **PARAMS_2)
     m3 = SIR(p0_3, **PARAMS_3)
-    m1.itr = {p0_2: 500., p0_3: 0.} # the number represents the rate at which its model infects m1
-    m2.itr = {p0_1: 120., p0_3: 100.} # temp: actually treating it as m1's pop/strain ir for relevant pop (see how this goes)
+    m1.itr = {p0_2: 500., p0_3: 0.} # the number represents the rate at which m1 infects that population
+    m2.itr = {p0_1: 120., p0_3: 100.}
     m3.itr = {p0_1: 0., p0_2: 1e2}
     t0 = time.time()
     mdls = [m1, m2, m3]
-    ts, ps, times, pops = simShell(t_max, mdls, nt, is_dyn, HST2['pn'], HST1['pn'], mr)
+    ts, ps, times, pops = simShell(t_max, mdls, nt, alleles)
     ex_tm = time.time() - t0
     times_norm = list(100*normalise(np.array(times)))
     print(f'Execution time: {ex_tm}')
@@ -82,10 +103,14 @@ def run(p0: np.ndarray=np.array([[2, 1, 0], [200, 0, 0], [2, 0, 0]], dtype='floa
     [print(f'{i}:\t{times_norm[i]}') for i in range(len(times))]
     print(f'Extra time: {ex_tm - sum(times)}')
     for i in range(len(mdls)):
-        ns = pops[i].getAllPopNms()
-        [plt.plot(ts, ps[:,i][:,j], label=ns[j]) for j in range(len(ns))]
+        ns = [''.join(n.split('.')) for n in pops[i].getAllPopNms()]
+        gens = []
+        for n in ns:
+            if '(' in n and ')' in n: gens += [n[n.index('(')+1:n.index(')')]]
+            else: gens += [n]
+        [plt.plot(ts, ps[:,i][:,j], label=ns[j], color=str2Color(gens[j]), alpha=pop2Alpha(ns[j])) for j in range(len(ns))]
         plt.plot(ts, sum(ps[:,i].transpose()), label='N')
-        plt.title(f'{mdls[i].pn} population')
+        plt.title(f'{mdls[i].pn_full} population')
         plt.legend()
         plt.xlabel('Simulation time')
         plt.ylabel('Population')

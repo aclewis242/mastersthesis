@@ -1,38 +1,80 @@
 class population:
+    '''
+    The class for a population.
+    '''
     sus = -1
     inf = {}
     rec = {}
     pn = ''
+    tot_pop = 0
 
     def __init__(self, p0: list[int], pn: str='', isn: str='init'):
+        '''
+        Initialises the population.
+
+        ### Parameters
+        p0: A 3-element integer list of the starting population amounts (S, I, R)
+        pn: The population's name
+        isn: The name of the initial strain
+        '''
         self.sus = p0[0]
         self.inf = {}
         self.rec = {}
         self.inf[isn] = p0[1]
         self.rec[isn] = p0[2]
         self.pn = pn
+        self.tot_pop = sum(p0)
     
-    def getPop(self, sn: str='init'):
+    def getPop(self, sn: str='init') -> list[int]:
+        '''
+        Returns a 3-element S, I, R list for the given strain.
+        '''
         return [self.sus, self.inf[sn], self.rec[sn]]
     
     def getAllPop(self):
+        '''
+        Returns all population elements as a list. S is first, then all Is, then all Rs.
+        '''
         return [self.sus] + list(self.inf.values()) + list(self.rec.values())
     
     def getAllPopNms(self):
+        '''
+        Returns the names of all population elements. S is first, then all Is, then all Rs.
+        '''
         return ['S'] + [f'I ({sn})' for sn in self.inf.keys()] + [f'R ({sn})' for sn in self.rec.keys()]
     
     def addPop(self, p: list[int], sn: str='init'):
-        # if sn == 'new' and sum(p): print(p)
+        '''
+        Adds the given population quantities.
+
+        ### Parameters
+        p: The quantities to add, as a 3-element list (S, I, R).
+        sn: The strain to add them to.
+        '''
         self.sus += p[0]
         self.inf[sn] += p[1]
         self.rec[sn] += p[2]
+        self.tot_pop += (p[0] + p[1] + p[2])
 
     def addStrain(self, nsn: str):
-        # print(f'adding strain {nsn}; existing are {self.inf.keys()}')
+        '''
+        Creates a new strain with the given name.
+        '''
         if nsn in self.inf.keys(): return
-        self.inf[nsn] = int(0.5*sum(self.inf.values()))
+        self.inf[nsn] = 0
         self.rec[nsn] = 0
-    
+
+    def printDat(self):
+        '''
+        Prints the object's information to the console.
+        '''
+        return ''.join([f'Population {self.pn}\n',
+                        f'S:\t{self.sus}\n',
+                        f'\tI\n',
+                        '\n'.join([f'{k}:\t{self.inf[k]}' for k in self.inf]),
+                        f'\n\tR\n',
+                        '\n'.join([f'{k}:\t{self.rec[k]}' for k in self.rec])])
+
     def __str__(self):
         return self.pn
     
