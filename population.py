@@ -1,3 +1,5 @@
+from func_lib import *
+
 class population:
     '''
     The class for a population.
@@ -7,17 +9,18 @@ class population:
     rec = {}
     pn = ''
     tot_pop = 0
+    is_vector = False
 
     def __init__(self, p0: list[int], pn: str='', isn: str='init'):
         '''
         Initialises the population.
 
         ### Parameters
-        p0: A 3-element integer list of the starting population amounts (S, I, R)
-        pn: The population's name
-        isn: The name of the initial strain
+        - `p0`: A 3-element integer list of the starting population amounts (S, I, R)
+        - `pn`: The population's name
+        - `isn`: The name of the initial strain
         '''
-        self.sus = p0[0]
+        self.sus = p0[0] + 1 # adding 1 to ensure the population is always non-zero (irrelevant in the grand scheme of things)
         self.inf = {}
         self.rec = {}
         self.inf[isn] = p0[1]
@@ -48,8 +51,8 @@ class population:
         Adds the given population quantities.
 
         ### Parameters
-        p: The quantities to add, as a 3-element list (S, I, R).
-        sn: The strain to add them to.
+        - `p`: The quantities to add, as a 3-element list (S, I, R).
+        - `sn`: The strain to add them to.
         '''
         self.sus += p[0]
         self.inf[sn] += p[1]
@@ -68,12 +71,12 @@ class population:
         '''
         Prints the object's information to the console.
         '''
-        return ''.join([f'Population {self.pn}\n',
-                        f'S:\t{self.sus}\n',
+        print(''.join([f'Population {self.pn}\n',
+                        f'S:\t{float2SN(self.sus)}\n',
                         f'\tI\n',
-                        '\n'.join([f'{k}:\t{self.inf[k]}' for k in self.inf]),
+                        '\n'.join([f'{k}:\t{float2SN(self.inf[k])}' for k in self.inf]),
                         f'\n\tR\n',
-                        '\n'.join([f'{k}:\t{self.rec[k]}' for k in self.rec])])
+                        '\n'.join([f'{k}:\t{float2SN(self.rec[k])}' for k in self.rec])]))
 
     def __str__(self):
         return self.pn

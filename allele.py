@@ -13,11 +13,11 @@ class allele:
         Initialises the allele.
 
         ### Parameters
-        char: The character representing the allele on the genome
-        fav_pop: The name of the population it's well-adapted to
-        unf_pop: The name of the population it's poorly-adapted to
-        param: The name of the trait it affects
-        fac: The numerical factor by which the trait is affected. 'Good' traits should be positive, 'bad' traits should be negative
+        - `char`: The character representing the allele on the genome
+        - `fav_pop`: The name of the population it's well-adapted to
+        - `unf_pop`: The name of the population it's poorly-adapted to
+        - `param`: The name of the trait it affects
+        - `fac`: The numerical factor by which the trait is affected. 'Good' traits should be positive, 'bad' traits should be negative
             (its value should be between -1 and 1, not inclusive)
         '''
         self.__dict__.update(kwargs)
